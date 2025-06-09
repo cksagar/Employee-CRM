@@ -24,7 +24,7 @@ export default function AddEmployeeForm({ onAdd, onClose }) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -32,12 +32,14 @@ export default function AddEmployeeForm({ onAdd, onClose }) {
       return;
     }
     setErrors({});
-    onAdd({
-      ...form,
-      id: Date.now().toString(),
-      updated: new Date().toLocaleDateString("en-US"),
-    });
-    onClose();
+
+    try {
+      await onAdd(form);
+      onClose();
+    } catch (err) {
+      console.error("Failed to submit form:", err);
+      // optionally show error to user
+    }
   }
 
   return (

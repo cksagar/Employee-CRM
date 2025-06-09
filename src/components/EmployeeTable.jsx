@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,12 +9,17 @@ import { columns } from "./columns";
 import TableHeader from "./TableHeader";
 import AddEmployeeForm from "./AddEmployeeForm";
 import EditEmployeeForm from "./EditEmployeeForm";
-import { employees as initialEmployees } from "../models/employees";
-
 import PaginationControls from "./Pagination";
 
+import {
+  fetchEmployees,
+  addEmployee,
+  updateEmployee,
+  deleteEmployee,
+} from "../api";
+
 export default function EmployeeTable() {
-  const [employees, setEmployees] = useState(initialEmployees);
+  const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
@@ -22,6 +27,10 @@ export default function EmployeeTable() {
   const [sorting, setSorting] = useState([{ id: "name", desc: false }]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
+
+  useEffect(() => {
+    fetchEmployees().then(setEmployees).catch(console.error);
+  }, []);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
@@ -48,9 +57,12 @@ export default function EmployeeTable() {
     getSortedRowModel: getSortedRowModel(),
     meta: {
       onEdit: (employee) => setEditEmployee(employee),
-      onDelete: (id) => {
+      onDelete: async (id) => {
         if (window.confirm("Are you sure you want to delete this employee?")) {
-          setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+          const success = await deleteEmployee(id);
+          if (success) {
+            setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+          }
         }
       },
     },
@@ -68,14 +80,16 @@ export default function EmployeeTable() {
     setPageIndex(0);
   }, [statusFilter, searchQuery, sorting]);
 
-  function handleAddEmployee(newEmployee) {
-    setEmployees((prev) => [newEmployee, ...prev]);
+  async function handleAddEmployee(newEmployee) {
+    const saved = await addEmployee(newEmployee);
+    setEmployees((prev) => [saved, ...prev]);
     setPageIndex(0);
   }
 
-  function handleUpdateEmployee(updatedEmployee) {
+  async function handleUpdateEmployee(updatedEmployee) {
+    const saved = await updateEmployee(updatedEmployee.id, updatedEmployee);
     setEmployees((prev) =>
-      prev.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp))
+      prev.map((emp) => (emp.id === saved.id ? saved : emp))
     );
   }
 
